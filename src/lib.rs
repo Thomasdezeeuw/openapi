@@ -6,6 +6,11 @@
 //!
 //! [OpenAPI Specification v3.1.0]: https://spec.openapis.org/oas/v3.1.0.html
 
+// Implements:
+// OpenAPI                 version 3.1.0
+// JSON Schema             draft-bhutton-json-schema-00
+// JSON Schema Validation  draft-bhutton-json-schema-validation-00
+
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -1034,7 +1039,686 @@ pub enum Reference<T> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Schema {
-    // TODO.
+    // JSON Schema Section 8. The JSON Schema Core Vocabulary
+    /// The `$schema` keyword is both used as a JSON Schema dialect identifier
+    /// and as the identifier of a resource which is itself a JSON Schema, which
+    /// describes the set of valid schemas written for this particular dialect.
+    ///
+    /// The value of this keyword MUST be a [URI] (containing a scheme) and this
+    /// URI MUST be normalized. The current schema MUST be valid against the
+    /// meta-schema identified by this URI.
+    ///
+    /// If present this MUST be used to determine which dialect should be used
+    /// when processing the schema. This allows use of Schema Objects which
+    /// comply with other drafts of JSON Schema than the default Draft 2020-12
+    /// support.
+    ///
+    /// [URI]: https://datatracker.ietf.org/doc/html/rfc3986
+    #[serde(rename = "$schema")]
+    pub schema: Option<String>,
+    /// The `$id` keyword identifies a schema resource with its canonical [RFC
+    /// 6596] URI.
+    ///
+    /// Note that this URI is an identifier and not necessarily a network
+    /// locator. In the case of a network-addressable URL, a schema need not be
+    /// downloadable from its canonical URI.
+    ///
+    /// [RFC 6596]: https://datatracker.ietf.org/doc/html/rfc6596
+    #[serde(rename = "$id")]
+    pub id: Option<String>,
+    /// The `$ref` keyword is an applicator that is used to reference a
+    /// statically identified schema. Its results are the results of the
+    /// referenced schema.
+    ///
+    /// The value of the `$ref` keyword MUST be a string which is a URI-
+    /// Reference. Resolved against the current URI base, it produces the URI of
+    /// the schema to apply. This resolution is safe to perform on schema load,
+    /// as the process of evaluating an instance cannot change how the reference
+    /// resolves.
+    #[serde(rename = "$ref")]
+    pub r#ref: Option<String>,
+    /// This keyword reserves a location for comments from schema authors to
+    /// readers or maintainers of the schema.
+    ///
+    /// Implementations MUST NOT present this string to end users. Tools for
+    /// editing schemas SHOULD support displaying and editing this keyword. The
+    /// value of this keyword MAY be used in debug or error output which is
+    /// intended for developers making use of schemas.
+    #[serde(rename = "$comment")]
+    pub comment: Option<String>,
+
+    // JSON Schema Section 10.2.1. Keywords for Applying Subschemas With Logic
+    /// An instance validates successfully against this keyword if it validates
+    /// successfully against all schemas defined by this keyword's value.
+    pub all_of: Option<Vec<Schema>>,
+    /// An instance validates successfully against this keyword if it validates
+    /// successfully against at least one schema defined by this keyword's
+    /// value. Note that when annotations are being collected, all subschemas
+    /// MUST be examined so that annotations are collected from each subschema
+    /// that validates successfully.
+    pub any_of: Option<Vec<Schema>>,
+    /// An instance validates successfully against this keyword if it validates
+    /// successfully against exactly one schema defined by this keyword's value.
+    pub one_of: Option<Vec<Schema>>,
+    /// An instance is valid against this keyword if it fails to validate
+    /// successfully against the schema defined by this keyword.
+    pub not: Option<Box<Schema>>,
+
+    // JSON Schema Section 10.2.2. Keywords for Applying Subschemas
+    // Conditionally
+    /// This validation outcome of this keyword's subschema has no direct effect
+    /// on the overall validation result. Rather, it controls which of the
+    /// `then` or `else` keywords are evaluated.
+    ///
+    /// Instances that successfully validate against this keyword's subschema
+    /// MUST also be valid against the subschema value of the `then` keyword, if
+    /// present.
+    ///
+    /// Instances that fail to validate against this keyword's subschema MUST
+    /// also be valid against the subschema value of the `else` keyword, if
+    /// present.
+    pub r#if: Option<Box<Schema>>,
+    /// When `if` is present, and the instance successfully validates against
+    /// its subschema, then validation succeeds against this keyword if the
+    /// instance also successfully validates against this keyword's subschema.
+    ///
+    /// This keyword has no effect when `if` is absent, or when the instance
+    /// fails to validate against its subschema. Implementations MUST NOT
+    /// evaluate the instance against this keyword, for either validation or
+    /// annotation collection purposes, in such cases.
+    pub then: Option<Box<Schema>>,
+    /// When `if` is present, and the instance fails to validate against its
+    /// subschema, then validation succeeds against this keyword if the instance
+    /// successfully validates against this keyword's subschema.
+    ///
+    /// This keyword has no effect when `if` is absent, or when the instance
+    /// successfully validates against its subschema. Implementations MUST NOT
+    /// evaluate the instance against this keyword, for either validation or
+    /// annotation collection purposes, in such cases.
+    pub r#else: Option<Box<Schema>>,
+    /// This keyword specifies subschemas that are evaluated if the instance is
+    /// an object and contains a certain property.
+    ///
+    /// If the object key is a property in the instance, the entire instance
+    /// must validate against the subschema. Its use is dependent on the
+    /// presence of the property.
+    ///
+    /// Omitting this keyword has the same behavior as an empty object.
+    pub dependent_schemas: HashMap<String, Schema>,
+
+    // JSON Schema Section 10.3.1. Keywords for Applying Subschemas to Arrays
+    /// Validation succeeds if each element of the instance validates against
+    /// the schema at the same position, if any. This keyword does not constrain
+    /// the length of the array. If the array is longer than this keyword's
+    /// value, this keyword validates only the prefix of matching length.
+    ///
+    /// This keyword produces an annotation value which is the largest index to
+    /// which this keyword applied a subschema. The value MAY be a boolean true
+    /// if a subschema was applied to every index of the instance, such as is
+    /// produced by the `items` keyword. This annotation affects the behavior of
+    /// `items` and `unevaluated_items`.
+    ///
+    /// Omitting this keyword has the same assertion behavior as an empty array.
+    pub prefix_items: Vec<Schema>,
+    /// This keyword applies its subschema to all instance elements at indexes
+    /// greater than the length of the `prefix_iItems` array in the same schema
+    /// object, as reported by the annotation result of that `prefix_items`
+    /// keyword. If no such annotation result exists, `items` applies its
+    /// subschema to all instance array elements.
+    ///
+    /// If the `items` subschema is applied to any positions within the instance
+    /// array, it produces an annotation result of boolean true, indicating that
+    /// all remaining array elements have been evaluated against this keyword's
+    /// subschema.
+    ///
+    /// Omitting this keyword has the same assertion behavior as an empty
+    /// schema.
+    ///
+    /// Implementations MAY choose to implement or optimize this keyword in
+    /// another way that produces the same effect, such as by directly checking
+    /// for the presence and size of a `prefix_items` array. Implementations
+    /// that do not support annotation collection MUST do so.
+    pub items: Vec<Schema>,
+    /// An array instance is valid against `contains` if at least one of its
+    /// elements is valid against the given schema. The subschema MUST be
+    /// applied to every array element even after the first match has been
+    /// found, in order to collect annotations for use by other keywords. This
+    /// is to ensure that all possible annotations are collected. Logically, the
+    /// validation result of applying the value subschema to each item in the
+    /// array MUST be ORed with `false`, resulting in an overall validation
+    /// result.
+    ///
+    /// This keyword produces an annotation value which is an array of the
+    /// indexes to which this keyword validates successfully when applying its
+    /// subschema, in ascending order. The value MAY be a boolean `true` if the
+    /// subschema validates successfully when applied to every index of the
+    /// instance. The annotation MUST be present if the instance array to which
+    /// this keyword's schema applies is empty.
+    pub contains: Option<Box<Schema>>,
+
+    // JSON Schema Section 10.3.2. Keywords for Applying Subschemas to Objects
+    /// Validation succeeds if, for each name that appears in both the instance
+    /// and as a name within this keyword's value, the child instance for that
+    /// name successfully validates against the corresponding schema.
+    ///
+    /// The annotation result of this keyword is the set of instance property
+    /// names matched by this keyword.
+    ///
+    /// Omitting this keyword has the same assertion behavior as an empty
+    /// object.
+    pub properties: Option<Box<Schema>>,
+    /// Each property name of this object SHOULD be a valid regular expression,
+    /// according to the ECMA-262 regular expression dialect. Each property
+    /// value of this object MUST be a valid JSON Schema.
+    ///
+    /// Validation succeeds if, for each instance name that matches any regular
+    /// expressions that appear as a property name in this keyword's value, the
+    /// child instance for that name successfully validates against each schema
+    /// that corresponds to a matching regular expression.
+    ///
+    /// The annotation result of this keyword is the set of instance property
+    /// names matched by this keyword.
+    ///
+    /// Omitting this keyword has the same assertion behavior as an empty
+    /// object.
+    pub pattern_properties: HashMap<String, Schema>,
+    /// The behavior of this keyword depends on the presence and annotation
+    /// results of `properties` and `pattern_properties` within the same schema
+    /// object. Validation with `additional_properties` applies only to the
+    /// child values of instance names that do not appear in the annotation
+    /// results of either `properties` or `pattern_properties`.
+    ///
+    /// For all such properties, validation succeeds if the child instance
+    /// validates against the `additional_properties` schema.
+    ///
+    /// The annotation result of this keyword is the set of instance property
+    /// names validated by this keyword's subschema.
+    ///
+    /// Omitting this keyword has the same assertion behavior as an empty
+    /// schema.
+    ///
+    /// Implementations MAY choose to implement or optimize this keyword in
+    /// another way that produces the same effect, such as by directly checking
+    /// the names in `properties` and the patterns in `pattern_properties`
+    /// against the instance property set. Implementations that do not support
+    /// annotation collection MUST do so.
+    pub additional_properties: Option<Box<Schema>>,
+    /// If the instance is an object, this keyword validates if every property
+    /// name in the instance validates against the provided schema. Note the
+    /// property name that the schema is testing will always be a string.
+    ///
+    /// Omitting this keyword has the same behavior as an empty schema.
+    pub property_names: Option<Box<Schema>>,
+
+    // JSON Schema Section 11. A Vocabulary for Unevaluated Locations
+    /// The behavior of this keyword depends on the annotation results of
+    /// adjacent keywords that apply to the instance location being validated.
+    /// Specifically, the annotations from `prefix_items`, `items`, and
+    /// `contains`, which can come from those keywords when they are adjacent to
+    /// the `unevaluated_items` keyword. Those three annotations, as well as
+    /// `unevaluated_items`, can also result from any and all adjacent in-place
+    /// applicator (Section 10.2) keywords. This includes but is not limited to
+    /// the in-place applicators defined in this document.
+    ///
+    /// If no relevant annotations are present, the `unevaluated_items`
+    /// subschema MUST be applied to all locations in the array. If a boolean
+    /// true value is present from any of the relevant annotations,
+    /// `unevaluated_items` MUST be ignored. Otherwise, the subschema MUST be
+    /// applied to any index greater than the largest annotation value for
+    /// `prefix_items`, which does not appear in any annotation value for
+    /// `contains`.
+    ///
+    /// This means that `prefix_items`, `items`, `contains`, and all in-place
+    /// applicators MUST be evaluated before this keyword can be evaluated.
+    /// Authors of extension keywords MUST NOT define an in-place applicator
+    /// that would need to be evaluated after this keyword.
+    ///
+    /// If the `unevaluatedItems` subschema is applied to any positions within
+    /// the instance array, it produces an annotation result of boolean true,
+    /// analogous to the behavior of `items`.
+    ///
+    /// Omitting this keyword has the same assertion behavior as an empty
+    /// schema.
+    pub unevaluated_items: Option<Box<Schema>>,
+    /// The behavior of this keyword depends on the annotation results of
+    /// adjacent keywords that apply to the instance location being validated.
+    /// Specifically, the annotations from "properties", "patternProperties",
+    /// and `additional_properties`, which can come from those keywords when
+    /// they are adjacent to the `unevaluated_properties` keyword. Those three
+    /// annotations, as well as `unevaluated_properties`, can also result from
+    /// any and all adjacent in-place applicator keywords. This includes but is
+    /// not limited to the in-place applicators defined in this document.
+    ///
+    /// Validation with `unevaluated_properties` applies only to the child
+    /// values of instance names that do not appear in the `properties`,
+    /// `pattern_properties`, `additional_properties`, or
+    /// `unevaluated_properties` annotation results that apply to the instance
+    /// location being validated.
+    ///
+    /// For all such properties, validation succeeds if the child instance
+    /// validates against the `unevaluated_properties` schema.
+    ///
+    /// This means that `properties`, `pattern_properties`,
+    /// `additional_properties`, and all in-place applicators MUST be evaluated
+    /// before this keyword can be evaluated. Authors of extension keywords MUST
+    /// NOT define an in-place applicator that would need to be evaluated after
+    /// this keyword.
+    ///
+    /// The annotation result of this keyword is the set of instance property
+    /// names validated by this keyword's subschema.
+    ///
+    /// Omitting this keyword has the same assertion behavior as an empty
+    /// schema.
+    pub unevaluated_properties: Option<Box<Schema>>,
+
+    // JSON Schema Validation Section 6.1. Validation Keywords for Any Instance
+    // Type
+    /// Data type.
+    pub r#type: Vec<Type>, // TODO: one or array.
+    /// Valid values for this schema.
+    pub r#enum: Vec<String>,
+    /// Use of this keyword is functionally equivalent to an [`enum`] with a
+    /// single value.
+    ///
+    /// [`enum`]: Schema::enum
+    pub r#const: Option<String>,
+
+    // JSON Schema Validation Section 6.2. Validation Keywords for Numeric
+    // Instances (number and integer)
+    /// A numeric instance is valid only if division by this keyword's value
+    /// results in an integer.
+    pub multiple_of: Option<f64>,
+    /// If the instance is a number, then this keyword validates only if the
+    /// instance is less than or exactly equal to `maximum`.
+    pub maximum: Option<f64>,
+    /// If the instance is a number, then the instance is valid only if it has a
+    /// value strictly less than (not equal to) `exclusiveMaximum`.
+    pub exclusive_maximum: Option<f64>,
+    /// If the instance is a number, then this keyword validates only if the
+    /// instance is greater than or exactly equal to `minimum`.
+    pub minimum: Option<f64>,
+    /// If the instance is a number, then the instance is valid only if it has a
+    /// value strictly greater than (not equal to) `exclusiveMinimum`.
+    pub exclusive_minimum: Option<f64>,
+
+    // JSON Schema Validation Section 6.3. Validation Keywords for Strings
+    /// A string instance is valid against this keyword if its length is less
+    /// than, or equal to, the value of this keyword.
+    pub max_length: Option<usize>,
+    /// A string instance is valid against this keyword if its length is greater
+    /// than, or equal to, the value of this keyword.
+    pub min_length: Option<usize>,
+    /// A string instance is considered valid if the regular expression matches
+    /// the instance successfully. Recall: regular expressions are not
+    /// implicitly anchored.
+    pub pattern: Option<String>,
+
+    // JSON Schema Validation Section 6.4. Validation Keywords for Arrays
+    /// An array instance is valid against `maxItems` if its size is less than,
+    /// or equal to, the value of this keyword.
+    pub max_items: Option<usize>,
+    /// An array instance is valid against `minItems` if its size is greater
+    /// than, or equal to, the value of this keyword.
+    pub min_items: Option<usize>,
+    /// If this keyword has boolean value false, the instance validates
+    /// successfully. If it has boolean value true, the instance validates
+    /// successfully if all of its elements are unique.
+    pub unique_ttems: bool,
+    /// If `contains` is not present within the same schema object, then this
+    /// keyword has no effect.
+    ///
+    /// An instance array is valid against `maxContains` in two ways, depending
+    /// on the form of the annotation result of an adjacent `contains`
+    /// json-schema keyword. The first way is if the annotation result is an
+    /// array and the length of that array is less than or equal to the
+    /// `maxContains` value. The second way is if the annotation result is a
+    /// boolean `true` and the instance array length is less than or equal to
+    /// the `maxContains` value.
+    pub max_contains: Option<usize>,
+    /// If `contains` is not present within the same schema object, then this
+    /// keyword has no effect.
+    ///
+    /// An instance array is valid against `minContains` in two ways, depending
+    /// on the form of the annotation result of an adjacent `contains`
+    /// [json-schema] keyword. The first way is if the annotation result is an
+    /// array and the length of that array is greater than or equal to the
+    /// `minContains` value. The second way is if the annotation result is a
+    /// boolean `true` and the instance array length is greater than or equal to
+    /// the `minContains` value.
+    ///
+    /// A value of 0 is allowed, but is only useful for setting a range of
+    /// occurrences from 0 to the value of `maxContains`. A value of 0 with no
+    /// `maxContains` causes `contains` to always pass validation.
+    ///
+    /// Omitting this keyword has the same behavior as a value of 1.
+    pub min_contains: Option<usize>,
+
+    // JSON Schema Validation Section 6.5. Validation Keywords for Objects
+    /// An object instance is valid against `maxProperties` if its number of
+    /// properties is less than, or equal to, the value of this keyword.
+    pub max_properties: Option<usize>,
+    /// An object instance is valid against `minProperties` if its number of
+    /// properties is greater than, or equal to, the value of this keyword.
+    ///
+    /// Omitting this keyword has the same behavior as a value of 0.
+    pub min_properties: Option<usize>,
+    /// An object instance is valid against this keyword if every item in the
+    /// array is the name of a property in the instance.
+    ///
+    /// Omitting this keyword has the same behavior as an empty array.
+    pub required: Vec<String>,
+    /// This keyword specifies properties that are required if a specific other
+    /// property is present. Their requirement is dependent on the presence of
+    /// the other property.
+    ///
+    /// Validation succeeds if, for each name that appears in both the instance
+    /// and as a name within this keyword's value, every item in the
+    /// corresponding array is also the name of a property in the instance.
+    ///
+    /// Omitting this keyword has the same behavior as an empty object.
+    pub dependent_required: HashMap<String, Vec<String>>,
+
+    // JSON Schema Validation Section 7. Vocabularies for Semantic Content With
+    // "format"
+    /// The `format` annotation keyword is defined to allow schema authors to
+    /// convey semantic information for a fixed subset of values which are
+    /// accurately described by authoritative resources, be they RFCs or other
+    /// external specifications.
+    pub format: Option<Format>,
+
+    // JSON Schema Validation Section 8. A Vocabulary for the Contents of
+    // String-Encoded Data
+    /// If the instance value is a string, this property defines that the string
+    /// SHOULD be interpreted as binary data and decoded using the encoding
+    /// named by this property.
+    ///
+    /// Possible values indicating base 16, 32, and 64 encodings with several
+    /// variations are listed in [RFC 4648]. Additionally, sections 6.7 and 6.8
+    /// of [RFC 2045] provide encodings used in MIME. As `base64` is defined in
+    /// both RFCs, the definition from RFC 4648 SHOULD be assumed unless the
+    /// string is specifically intended for use in a MIME context. Note that all
+    /// of these encodings result in strings consisting only of 7-bit ASCII
+    /// characters. Therefore, this keyword has no meaning for strings
+    /// containing characters outside of that range.
+    ///
+    /// If this keyword is absent, but `content_media_type` is present, this
+    /// indicates that the encoding is the identity encoding, meaning that no
+    /// transformation was needed in order to represent the content in a UTF-8
+    /// string.
+    ///
+    /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648
+    /// [RFC 2045]: https://datatracker.ietf.org/doc/html/rfc2045
+    pub content_encoding: Option<String>,
+    /// If the instance is a string, this property indicates the media type of
+    /// the contents of the string. If `content_encoding` is present, this
+    /// property describes the decoded string.
+    ///
+    /// The value of this property MUST be a string, which MUST be a media type,
+    /// as defined by [RFC 2046].
+    ///
+    /// [RFC 2046]: https://datatracker.ietf.org/doc/html/rfc2046
+    pub content_media_type: Option<String>,
+    /// If the instance is a string, and if `content_media_type` is present,
+    /// this property contains a schema which describes the structure of the
+    /// string.
+    ///
+    /// This keyword MAY be used with any media type that can be mapped into
+    /// JSON Schema's data model.
+    ///
+    /// The value of this property MUST be a valid JSON schema. It SHOULD be
+    /// ignored if `content_media_type` is not present.
+    pub content_schema: Option<Box<Schema>>,
+
+    // JSON Schema Validation Section 9. A Vocabulary for Basic Meta-Data
+    // Annotations
+    /// A title will preferably be short explanation about the purpose of the
+    /// instance described by this schema.
+    pub title: Option<String>,
+    /// A description will provide explanation about the purpose of the instance
+    /// described by this schema. [CommonMark syntax] MAY be used for rich text
+    /// representation.
+    ///
+    /// [CommonMark syntax]: https://spec.commonmark.org
+    pub description: Option<String>,
+    /// This keyword can be used to supply a default JSON value associated with
+    /// a particular schema. It is RECOMMENDED that a default value be valid
+    /// against the associated schema.
+    pub default: Option<Any>,
+    /// If `deprecated` has a value of boolean true, it indicates that
+    /// applications SHOULD refrain from usage of the declared property. It MAY
+    /// mean the property is going to be removed in the future.
+    ///
+    /// A root schema containing `deprecated` with a value of true indicates
+    /// that the entire resource being described MAY be removed in the future.
+    ///
+    /// The `deprecated` keyword applies to each instance location to which the
+    /// schema object containing the keyword successfully applies. This can
+    /// result in scenarios where every array item or object property is
+    /// deprecated even though the containing array or object is not.
+    ///
+    /// Omitting this keyword has the same behavior as a value of false.
+    pub deprecated: bool,
+    /// If `read_only` has a value of boolean true, it indicates that the value
+    /// of the instance is managed exclusively by the owning authority, and
+    /// attempts by an application to modify the value of this property are
+    /// expected to be ignored or rejected by that owning authority.
+    ///
+    /// An instance document that is marked as `read_only` for the entire
+    /// document MAY be ignored if sent to the owning authority, or MAY result
+    /// in an error, at the authority's discretion.
+    ///
+    /// Omitting this keyword has the same behavior as values of false.
+    pub read_only: bool,
+    /// If `write_only` has a value of boolean true, it indicates that the value
+    /// is never present when the instance is retrieved from the owning
+    /// authority. It can be present when sent to the owning authority to update
+    /// or create the document (or the resource it represents), but it will not
+    /// be included in any updated or newly created version of the instance.
+    ///
+    /// An instance document that is marked as `writeOnly` for the entire
+    /// document MAY be returned as a blank document of some sort, or MAY
+    /// produce an error upon retrieval, or have the retrieval request ignored,
+    /// at the authority's discretion.
+    ///
+    /// Omitting this keyword has the same behavior as values of false.
+    pub write_only: bool,
+    /// This keyword can be used to provide sample JSON values associated with a
+    /// particular schema, for the purpose of illustrating usage. It is
+    /// RECOMMENDED that these values be valid against the associated schema.
+    ///
+    /// Implementations MAY use the value(s) of `default`, if present, as an
+    /// additional example. If `examples` is absent, `default` MAY still be used
+    /// in this manner.
+    pub examples: Vec<Any>,
+
+    // OpenAPI spec extension.
+    /// Adds support for polymorphism. The discriminator is an object name that
+    /// is used to differentiate between other schemas which may satisfy the
+    /// payload description.
+    pub discriminator: Option<Discriminator>,
+    /// This MAY be used only on properties schemas. It has no effect on root
+    /// schemas. Adds additional metadata to describe the XML representation of
+    /// this property.
+    pub xml: Option<Xml>,
+    /// Additional external documentation for this schema.
+    pub external_docs: Option<ExternalDocument>,
+    /// A free-form property to include an example of an instance for this
+    /// schema. To represent examples that cannot be naturally represented in
+    /// JSON or YAML, a string value can be used to contain the example with
+    /// escaping where necessary.
+    ///
+    /// **Deprecated:** The `example` property has been deprecated in favor of
+    /// the JSON Schema `examples` keyword. Use of `example` is discouraged, and
+    /// later versions of this specification may remove it.
+    pub example: Any,
+    /// Allows the schema to be extended. The value can be `null`/`None`, a
+    /// primitive, an array or an object.
+    #[serde(flatten)]
+    pub extensions: HashMap<String, Any>,
+}
+
+/// Data type defined by [JSON Schema Validation Section 6.1.1].
+///
+/// [JSON Schema Validation Section 6.1.1]: https://datatracker.ietf.org/doc/html/draft-bhutton-json-schema-validation-00#section-6.1.1
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", untagged)]
+pub enum Type {
+    Null,
+    Boolean,
+    Object,
+    Array,
+    Number,
+    String,
+    Integer,
+}
+
+/// Data format defined by [JSON Schema Validation Section 7.3] and extended by
+/// the OpenAPI spec.
+///
+/// [JSON Schema Validation Section 7.3]: https://datatracker.ietf.org/doc/html/draft-bhutton-json-schema-validation-00#section-7.3
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", untagged)]
+pub enum Format {
+    // JSON Schema Validation Section 7.3.1. Dates, Times, and Duration
+    /// A string instance is valid against this attribute if it is a valid
+    /// representation according to the "date-time" production.
+    #[serde(rename = "date-time")]
+    DateTime,
+    /// A string instance is valid against this attribute if it is a valid
+    /// representation according to the "full-date" production.
+    #[serde(alias = "full-date")]
+    Date,
+    /// A string instance is valid against this attribute if it is a valid
+    /// representation according to the "full-time" production.
+    #[serde(alias = "full-time")]
+    Time,
+    /// A string instance is valid against this attribute if it is a valid
+    /// representation according to the "duration" production.
+    Duration,
+
+    // JSON Schema Validation Section 7.3.2. Email Addresses
+    /// As defined by the "Mailbox" ABNF rule in [RFC 5321, section 4.1.2].
+    ///
+    /// [RFC 5321, section 4.1.2]: https://datatracker.ietf.org/doc/html/rfc5321#section-4.1.2
+    Email,
+    /// As defined by the extended "Mailbox" ABNF rule in [RFC 6531, section
+    /// 3.3].
+    ///
+    /// [RFC 6531, section 3.3]: https://datatracker.ietf.org/doc/html/rfc6531#section-3.3
+    #[serde(rename = "idn-email")]
+    IdnEmail,
+
+    // JSON Schema Validation Section 7.3.3. Hostnames
+    /// As defined by [RFC 1123, section 2.1], including host names produced
+    /// using the Punycode algorithm specified in [RFC 5891, section 4.4].
+    ///
+    /// [RFC 1123, section 2.1]: https://datatracker.ietf.org/doc/html/rfc1123#section-2.1
+    /// [RFC 5891, section 4.4]: https://datatracker.ietf.org/doc/html/rfc5891#section-4.4
+    Hostname,
+    /// As defined by either [RFC 1123] as for hostname, or an internationalized
+    /// hostname as defined by [RFC 5890, section 2.3.2.3].
+    ///
+    /// [RFC 1123]: https://datatracker.ietf.org/doc/html/rfc1123#section-2.1
+    /// [RFC 5890]: https://datatracker.ietf.org/doc/html/rfc5890#section-2.3.2.3
+    #[serde(rename = "idn-hostname")]
+    IdnHostname,
+
+    // JSON Schema Validation Section 7.3.4. IP Addresses
+    /// An IPv4 address according to the "dotted-quad" ABNF syntax as defined in
+    /// [RFC 2673, section 3.2].
+    ///
+    /// [RFC 2673, section 3.2]: https://datatracker.ietf.org/doc/html/rfc2673#section-3.2
+    Ipv4,
+    /// An IPv6 address as defined in [RFC 4291, section 2.2].
+    ///
+    /// [RFC 4291, section 2.2]: https://datatracker.ietf.org/doc/html/rfc4291#section-2.2
+    Ipv6,
+
+    // JSON Schema Validation Section 7.3.5. Resource Identifiers
+    /// A string instance is valid against this attribute if it is a valid URI,
+    /// according to [RFC3986].
+    ///
+    /// [RFC3986]: https://datatracker.ietf.org/doc/html/rfc3986
+    Uri,
+    /// A string instance is valid against this attribute if it is a valid URI
+    /// Reference (either a URI or a relative- reference), according to
+    /// [RFC3986].
+    ///
+    /// [RFC3986]: https://datatracker.ietf.org/doc/html/rfc3986
+    #[serde(rename = "uri-reference")]
+    UriReference,
+    /// A string instance is valid against this attribute if it is a valid IRI,
+    /// according to [RFC3987].
+    ///
+    /// [RFC3987]: https://datatracker.ietf.org/doc/html/rfc3987
+    Iri,
+    /// A string instance is valid against this attribute if it is a valid IRI
+    /// Reference (either an IRI or a relative- reference), according to
+    /// [RFC3987].
+    ///
+    /// [RFC3987]: https://datatracker.ietf.org/doc/html/rfc3987
+    #[serde(rename = "iri-reference")]
+    IriReference,
+    /// A string instance is valid against this attribute if it is a valid
+    /// string representation of a UUID, according to [RFC4122].
+    ///
+    /// Note that the "uuid" format is for plain UUIDs, not UUIDs in URNs. An
+    /// example is "f81d4fae-7dec-11d0-a765-00a0c91e6bf6". For UUIDs as URNs,
+    /// use the "uri" format, with a "pattern" regular expression of
+    /// "^urn:uuid:" to indicate the URI scheme and URN namespace.
+    ///
+    /// [RFC4122]: https://datatracker.ietf.org/doc/html/rfc4122
+    Uuid,
+
+    // JSON Schema Validation Section 7.3.6. uri-template
+    /// A string instance is valid against this attribute if it is a valid URI
+    /// Template (of any level), according to [RFC6570].
+    ///
+    /// Note that URI Templates may be used for IRIs; there is no separate IRI
+    /// Template specification.
+    ///
+    /// [RFC6570]: https://datatracker.ietf.org/doc/html/rfc6570
+    #[serde(rename = "uri-template")]
+    UriTemplate,
+
+    // JSON Schema Validation Section 7.3.7. JSON Pointers
+    /// A string instance is valid against this attribute if it is a valid JSON
+    /// string representation of a JSON Pointer, according to [RFC 6901, section
+    /// 5].
+    ///
+    /// [RFC 6901, section 5]: https://datatracker.ietf.org/doc/html/rfc6901#section-5
+    #[serde(rename = "json-pointer")]
+    JsonPointer,
+    /// A string instance is valid against this attribute if it is a valid
+    /// Relative JSON Pointer.
+    #[serde(rename = "relative-json-pointer")]
+    RelativeJsonPointer,
+
+    // JSON Schema Validation Section 7.3.8. regex
+    /// A regular expression, which SHOULD be valid according to the [ECMA-262]
+    /// regular expression dialect.
+    ///
+    /// Implementations that validate formats MUST accept at least the subset of
+    /// ECMA-262 defined in the Regular Expressions (Section 4.3) section of
+    /// this specification, and SHOULD accept all valid ECMA-262 expressions.
+    ///
+    /// [ECMA-262]: https://www.ecma-international.org/ecma-262/11.0
+    Regex,
+
+    // OpenAPI spec extension.
+    /// Signed 32 bits integer.
+    Int32,
+    /// Signed 64 bits integer (a.k.a. long).
+    Int64,
+    /// 32 bit floating point number.
+    Float,
+    /// 64 bit floating point number.
+    Double,
+    /// A hint to UIs to obscure input.
+    Password,
+
+    /// Unrecognised data format.
+    Other(String),
 }
 
 /// Discriminator Object.
@@ -1260,5 +1944,4 @@ pub struct SecurityRequirement {
 /// Any value.
 ///
 /// Untyped value.
-// FIXME.
-pub type Any = ();
+pub type Any = (); // FIXME.
