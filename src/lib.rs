@@ -61,7 +61,7 @@ pub struct Spec {
     /// referenced) Path Item Object describes a request that may be initiated
     /// by the API provider and the expected responses.
     #[serde(default)]
-    pub webhooks: HashMap<String, Reference<PathItem>>,
+    pub webhooks: HashMap<String, PathItem>, // NOTE: `PathItem` includes all fields of `Reference`.
     /// An element to hold various schemas for the document.
     #[serde(default)]
     pub components: Components,
@@ -266,7 +266,7 @@ pub struct Components {
     ///
     /// [Path Item Objects]: PathItem
     #[serde(default)]
-    pub path_items: HashMap<String, Reference<PathItem>>,
+    pub path_items: HashMap<String, PathItem>, // NOTE: `PathItem` includes all fields of `Reference`.
 }
 
 /// Holds the relative paths to the individual endpoints and their operations.
@@ -555,7 +555,7 @@ pub struct Parameter {
     /// YAML, a string value can contain the example with escaping where
     /// necessary.
     #[serde(default)]
-    pub example: Any,
+    pub example: Option<Any>,
     /// Examples of the parameter's potential value. Each example SHOULD contain
     /// a value in the correct format as specified in the parameter encoding.
     /// The `examples` field is mutually exclusive of the `example` field.
@@ -685,7 +685,7 @@ pub struct MediaType {
     /// `schema` which contains an example, the `example` value SHALL _override_
     /// the example provided by the schema.
     #[serde(default)]
-    pub example: Any,
+    pub example: Option<Any>,
     /// Examples of the media type. Each example object SHOULD match the media
     /// type and specified schema if present. The `examples` field is mutually
     /// exclusive of the `example` field. Furthermore, if referencing a `schema`
@@ -797,7 +797,7 @@ pub struct Responses {
     /// code definition takes precedence over the range definition for that
     /// code.
     #[serde(flatten, default)]
-    pub response: HashMap<u16, Reference<Response>>,
+    pub response: HashMap<String, Reference<Response>>,
 }
 
 /// Describes a single response from an API Operation, including design-time,
@@ -854,7 +854,7 @@ pub struct Callback {
     /// A Path Item Object, or a reference to one, used to define a callback
     /// request and expected responses.
     #[serde(default)]
-    pub expressions: HashMap<String, Reference<PathItem>>,
+    pub expressions: HashMap<String, PathItem>, // NOTE: `PathItem` includes all fields of `Reference`.
 }
 
 /// Example Object.
@@ -880,7 +880,7 @@ pub struct Example {
     /// naturally represented in JSON or YAML, use a string value to contain the
     /// example, escaping where necessary.
     #[serde(default)]
-    pub value: Any,
+    pub value: Option<Any>,
     /// A URI that points to the literal example. This provides the capability
     /// to reference examples that cannot easily be included in JSON or YAML
     /// documents. The `value` field and `externalValue` field are mutually
@@ -1044,7 +1044,7 @@ pub struct Header {
     /// YAML, a string value can contain the example with escaping where
     /// necessary.
     #[serde(default)]
-    pub example: Any,
+    pub example: Option<Any>,
     /// Examples of the parameter's potential value. Each example SHOULD contain
     /// a value in the correct format as specified in the parameter encoding.
     /// The `examples` field is mutually exclusive of the `example` field.
@@ -1331,7 +1331,7 @@ pub struct Schema {
     /// Omitting this keyword has the same assertion behavior as an empty
     /// object.
     #[serde(default)]
-    pub properties: Option<Box<Schema>>,
+    pub properties: Option<HashMap<String, Schema>>,
     /// Each property name of this object SHOULD be a valid regular expression,
     /// according to the ECMA-262 regular expression dialect. Each property
     /// value of this object MUST be a valid JSON Schema.
@@ -1444,7 +1444,8 @@ pub struct Schema {
     // JSON Schema Validation Section 6.1. Validation Keywords for Any Instance
     // Type
     /// Data type.
-    pub r#type: Vec<Type>, // TODO: one or array.
+    #[serde(with = "one_or_array", default)]
+    pub r#type: Vec<Type>,
     /// Valid values for this schema.
     #[serde(default)]
     pub r#enum: Vec<String>,
@@ -1714,18 +1715,81 @@ pub struct Schema {
     /// the JSON Schema `examples` keyword. Use of `example` is discouraged, and
     /// later versions of this specification may remove it.
     #[serde(default)]
-    pub example: Any,
+    pub example: Option<Any>,
     /// Allows the schema to be extended. The value can be `null`/`None`, a
     /// primitive, an array or an object.
     #[serde(flatten)]
     pub extensions: HashMap<String, Any>,
 }
 
+mod one_or_array {
+    //! Deserialize and Serialize functions for [`Schema::type`].
+    //!
+    //! Accepts either 1 type (string) or an array of types (strings).
+    //!
+    //! [`Schema::type`]: crate::Schema::type
+
+    use std::fmt;
+
+    use serde::de::{Error, IntoDeserializer, SeqAccess, Visitor};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use crate::Type;
+
+    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Vec<Type>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct OneOrArray;
+
+        impl<'de> Visitor<'de> for OneOrArray {
+            type Value = Vec<Type>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("one or more types")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                let r#type = Type::deserialize(v.into_deserializer())?;
+                let mut types = Vec::with_capacity(1);
+                types.push(r#type);
+                Ok(types)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut types = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+                while let Some(r#type) = seq.next_element()? {
+                    types.push(r#type);
+                }
+                Ok(types)
+            }
+        }
+
+        deserializer.deserialize_any(OneOrArray)
+    }
+
+    pub(crate) fn serialize<S>(r#type: &Vec<Type>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match r#type.len() {
+            1 => r#type[0].serialize(serializer),
+            _ => r#type.serialize(serializer),
+        }
+    }
+}
+
 /// Data type defined by [JSON Schema Validation Section 6.1.1].
 ///
 /// [JSON Schema Validation Section 6.1.1]: https://datatracker.ietf.org/doc/html/draft-bhutton-json-schema-validation-00#section-6.1.1
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", untagged)]
+#[serde(rename_all = "camelCase")]
 pub enum Type {
     Null,
     Boolean,
@@ -1741,7 +1805,7 @@ pub enum Type {
 ///
 /// [JSON Schema Validation Section 7.3]: https://datatracker.ietf.org/doc/html/draft-bhutton-json-schema-validation-00#section-7.3
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", untagged)]
+#[serde(rename_all = "camelCase")]
 pub enum Format {
     // JSON Schema Validation Section 7.3.1. Dates, Times, and Duration
     /// A string instance is valid against this attribute if it is a valid
