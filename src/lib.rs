@@ -91,7 +91,8 @@ pub struct Info {
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
     pub description: Option<String>,
-    /// A URL to the Terms of Service for the API. This MUST be in the form of a URL.
+    /// A URL to the Terms of Service for the API. This MUST be in the form of a
+    /// URL.
     pub terms_of_service: Option<String>,
     /// The contact information for the exposed API.
     pub contact: Option<Contact>,
@@ -738,7 +739,7 @@ pub struct Response {
     pub links: HashMap<String, Reference<Link>>,
 }
 
-/// Callback Object
+/// Callback Object.
 ///
 /// A map of possible out-of band callbacks related to the parent operation.
 /// Each value in the map is a [Path Item Object] that describes a set of
@@ -760,7 +761,7 @@ pub struct Callback {
     pub expressions: HashMap<String, Reference<PathItem>>,
 }
 
-/// Example Object
+/// Example Object.
 ///
 /// In all cases, the example value is expected to be compatible with the type
 /// schema of its associated value. Tooling implementations MAY choose to
@@ -885,7 +886,7 @@ pub struct Link {
 /// [RFC7230]: https://tools.ietf.org/html/rfc7230#section-3.2.6
 pub type RuntimeExpression = String;
 
-/// Header Object
+/// Header Object.
 ///
 /// The Header Object follows the structure of the [Parameter Object] with the
 /// following changes:
@@ -960,9 +961,13 @@ pub enum HeaderStyle {
     Simple,
 }
 
-/// Tag Object
+/// Tag Object.
 ///
-/// Adds metadata to a single tag that is used by the [Operation Object](#operationObject). It is not mandatory to have a Tag Object per tag defined in the Operation Object instances.
+/// Adds metadata to a single tag that is used by the [Operation Object]. It is
+/// not mandatory to have a Tag Object per tag defined in the Operation Object
+/// instances.
+///
+/// [Operation Object]: Operation
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Tag {
@@ -1204,11 +1209,14 @@ pub struct OauthFlow {
     /// The token URL to be used for this flow. This MUST be in the form of a
     /// URL. The OAuth2 standard requires the use of TLS.
     ///
-    /// Applies to `oauth2` (`"password"`, `"clientCredentials"`, `"authorizationCode"`)
+    /// Applies to `oauth2` (`"password"`, `"clientCredentials"`,
+    /// `"authorizationCode"`).
     pub token_url: String,
-    /// The URL to be used for obtaining refresh tokens. This MUST be in the form of a URL. The OAuth2 standard requires the use of TLS.
+    /// The URL to be used for obtaining refresh tokens. This MUST be in the
+    /// form of a URL. The OAuth2 standard requires the use of TLS.
     pub refresh_url: Option<String>,
-    /// The available scopes for the OAuth2 security scheme. A map between the scope name and a short description for it. The map MAY be empty.
+    /// The available scopes for the OAuth2 security scheme. A map between the
+    /// scope name and a short description for it. The map MAY be empty.
     pub scopes: HashMap<String, String>,
 }
 
