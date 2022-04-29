@@ -11,7 +11,7 @@
 // JSON Schema             draft-bhutton-json-schema-00
 // JSON Schema Validation  draft-bhutton-json-schema-validation-00
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +31,7 @@ pub struct Spec {
     /// the OpenAPI document uses. The `openapi` field SHOULD be used by tooling
     /// to interpret the OpenAPI document. This is *not* related to the API
     /// [`Info::version`] string.
-    pub open_api: Version,
+    pub openapi: Version,
     /// Provides metadata about the API. The metadata MAY be used by tooling as
     /// required.
     pub info: Info,
@@ -39,7 +39,8 @@ pub struct Spec {
     /// contained within this OAS document. This MUST be in the form of a URI.
     ///
     /// [Schema Objects]: Schema
-    pub json_schema_dialect: String,
+    #[serde(default)]
+    pub json_schema_dialect: Option<String>,
     /// An array of Server Objects, which provide connectivity information to a
     /// target server. If the `servers` property is not provided, or is an empty
     /// array, the default value would be a [Server Object] with a [url] value
@@ -47,8 +48,10 @@ pub struct Spec {
     ///
     /// [Server Object]: Server
     /// [url]: Server::url
+    #[serde(default)]
     pub servers: Vec<Server>,
     /// The available paths and operations for the API.
+    #[serde(default)]
     pub paths: Paths,
     /// The incoming webhooks that MAY be received as part of this API and that
     /// the API consumer MAY choose to implement. Closely related to the
@@ -57,8 +60,10 @@ pub struct Spec {
     /// name is a unique string to refer to each webhook, while the (optionally
     /// referenced) Path Item Object describes a request that may be initiated
     /// by the API provider and the expected responses.
+    #[serde(default)]
     pub webhooks: HashMap<String, Reference<PathItem>>,
     /// An element to hold various schemas for the document.
+    #[serde(default)]
     pub components: Components,
     /// A declaration of which security mechanisms can be used across the API.
     /// The list of values includes alternative security requirement objects
@@ -66,6 +71,7 @@ pub struct Spec {
     /// be satisfied to authorize a request. Individual operations can override
     /// this definition. To make security optional, an empty security
     /// requirement (`{}`) can be included in the array.
+    #[serde(default)]
     pub security: Vec<SecurityRequirement>,
     /// A list of tags used by the document with additional metadata. The order
     /// of the tags can be used to reflect on their order by the parsing tools.
@@ -74,8 +80,10 @@ pub struct Spec {
     /// tools' logic. Each tag name in the list MUST be unique.
     ///
     /// [Operation Object]: Operation
+    #[serde(default)]
     pub tags: Vec<Tag>,
     /// Additional external documentation.
+    #[serde(default)]
     pub external_docs: Option<ExternalDocument>,
 }
 
@@ -98,19 +106,24 @@ pub struct Info {
     /// The title of the API.
     pub title: String,
     /// A short summary of the API.
+    #[serde(default)]
     pub summary: Option<String>,
     /// A description of the API. [CommonMark syntax] MAY be used for rich text
     /// representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// A URL to the Terms of Service for the API. This MUST be in the form of a
     /// URL.
+    #[serde(default)]
     pub terms_of_service: Option<String>,
     /// The contact information for the exposed API.
+    #[serde(default)]
     pub contact: Option<Contact>,
     /// The license information for the exposed API.
-    pub license: License,
+    #[serde(default)]
+    pub license: Option<License>,
     /// The version of the OpenAPI document (which is distinct from the OpenAPI
     /// Specification version or the API implementation version).
     pub version: String,
@@ -121,12 +134,15 @@ pub struct Info {
 #[serde(rename_all = "camelCase")]
 pub struct Contact {
     /// The identifying name of the contact person/organization.
+    #[serde(default)]
     pub name: Option<String>,
     /// The URL pointing to the contact information. This MUST be in the form of
     /// a URL.
+    #[serde(default)]
     pub url: Option<String>,
     /// The email address of the contact person/organization. This MUST be in
     /// the form of an email address.
+    #[serde(default)]
     pub email: Option<String>,
 }
 
@@ -140,9 +156,11 @@ pub struct License {
     /// mutually exclusive of the `url` field.
     ///
     /// [SPDX]: (https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60)
+    #[serde(default)]
     pub identifier: Option<String>,
     /// A URL to the license used for the API. This MUST be in the form of a
     /// URL. The `url` field is mutually exclusive of the `identifier` field.
+    #[serde(default)]
     pub url: Option<String>,
 }
 
@@ -159,9 +177,11 @@ pub struct Server {
     /// [CommonMark syntax] MAY be used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// A map between a variable name and its value. The value is used for
     /// substitution in the server's URL template.
+    #[serde(default)]
     pub variables: HashMap<String, ServerVariable>,
 }
 
@@ -172,6 +192,7 @@ pub struct Server {
 pub struct ServerVariable {
     /// An enumeration of string values to be used if the substitution options
     /// are from a limited set. The array MUST NOT be empty.
+    #[serde(default)]
     pub r#enum: Vec<String>,
     /// The default value to use for substitution, which SHALL be sent if an
     /// alternate value is _not_ supplied. Note this behavior is different than
@@ -184,6 +205,7 @@ pub struct ServerVariable {
     /// be used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
 }
 
@@ -192,48 +214,58 @@ pub struct ServerVariable {
 /// All objects defined within the components object will have no effect on the
 /// API unless they are explicitly referenced from properties outside the
 /// components object.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Components {
     /// An object to hold reusable [Schema Objects].
     ///
     /// [Schema Objects]: Schema
+    #[serde(default)]
     pub schemas: HashMap<String, Schema>,
     /// An object to hold reusable [Response Objects].
     ///
     /// [Response Objects]: Response
+    #[serde(default)]
     pub responses: HashMap<String, Reference<Response>>,
     /// An object to hold reusable [Parameter Objects].
     ///
     /// [Parameter Objects]: Parameter
+    #[serde(default)]
     pub parameters: HashMap<String, Reference<Parameter>>,
     /// An object to hold reusable [Example Objects].
     ///
     /// [Example Objects]: Example
+    #[serde(default)]
     pub examples: HashMap<String, Reference<Example>>,
     /// An object to hold reusable [Request Body Objects].
     ///
     /// [Request Body Objects]: RequestBody
+    #[serde(default)]
     pub request_bodies: HashMap<String, Reference<RequestBody>>,
     /// An object to hold reusable [Header Objects].
     ///
     /// [Header Objects]: Header
+    #[serde(default)]
     pub headers: HashMap<String, Reference<Header>>,
     /// An object to hold reusable [Security Scheme Objects].
     ///
     /// [Security Scheme Objects]: SecurityScheme
+    #[serde(default)]
     pub security_schemes: HashMap<String, Reference<SecurityScheme>>,
     /// An object to hold reusable [Link Objects].
     ///
     /// [Link Objects]: Link
+    #[serde(default)]
     pub links: HashMap<String, Reference<Link>>,
     /// An object to hold reusable [Callback Objects].
     ///
     /// [Callback Objects]: Callback
+    #[serde(default)]
     pub callbacks: HashMap<String, Reference<Callback>>,
     /// An object to hold reusable [Path Item Object].
     ///
     /// [Path Item Objects]: PathItem
+    #[serde(default)]
     pub path_items: HashMap<String, Reference<PathItem>>,
 }
 
@@ -270,33 +302,44 @@ pub struct PathItem {
     /// References.
     ///
     /// [Path Item Object]: PathItem
-    #[serde(rename = "$ref")]
-    pub r#ref: String,
+    #[serde(rename = "$ref", default)]
+    pub r#ref: Option<String>,
     /// An optional, string summary, intended to apply to all operations in this
     /// path.
-    pub summary: String,
+    #[serde(default)]
+    pub summary: Option<String>,
     /// An optional, string description, intended to apply to all operations in
     /// this path. [CommonMark syntax] MAY be used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
-    pub description: String,
+    #[serde(default)]
+    pub description: Option<String>,
     /// A definition of a GET operation on this path.
+    #[serde(default)]
     pub get: Option<Operation>,
     /// A definition of a PUT operation on this path.
+    #[serde(default)]
     pub put: Option<Operation>,
     /// A definition of a POST operation on this path.
+    #[serde(default)]
     pub post: Option<Operation>,
     /// A definition of a DELETE operation on this path.
+    #[serde(default)]
     pub delete: Option<Operation>,
     /// A definition of a OPTIONS operation on this path.
+    #[serde(default)]
     pub options: Option<Operation>,
     /// A definition of a HEAD operation on this path.
+    #[serde(default)]
     pub head: Option<Operation>,
     /// A definition of a PATCH operation on this path.
+    #[serde(default)]
     pub patch: Option<Operation>,
     /// A definition of a TRACE operation on this path.
+    #[serde(default)]
     pub trace: Option<Operation>,
     /// An alternative `server` array to service all operations in this path.
+    #[serde(default)]
     pub servers: Vec<Server>,
     /// A list of parameters that are applicable for all the operations
     /// described under this path. These parameters can be overridden at the
@@ -309,6 +352,7 @@ pub struct PathItem {
     /// [name]: Parameter::name
     /// [location]: Parameter::in
     /// [OpenAPI Object's components/parameters]: Components::parameters
+    #[serde(default)]
     pub parameters: Vec<Reference<Parameter>>,
 }
 
@@ -318,21 +362,26 @@ pub struct PathItem {
 pub struct Operation {
     /// A list of tags for API documentation control. Tags can be used for
     /// logical grouping of operations by resources or any other qualifier.
+    #[serde(default)]
     pub tags: Vec<String>,
     /// A short summary of what the operation does.
+    #[serde(default)]
     pub summary: Option<String>,
     /// A verbose explanation of the operation behavior. [CommonMark syntax] MAY
     /// be used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// Additional external documentation for this operation.
+    #[serde(default)]
     pub external_docs: Option<ExternalDocument>,
     /// Unique string used to identify the operation. The id MUST be unique
     /// among all operations described in the API. The operationId value is
     /// **case-sensitive**. Tools and libraries MAY use the operationId to
     /// uniquely identify an operation, therefore, it is RECOMMENDED to follow
     /// common programming naming conventions.
+    #[serde(default)]
     pub operation_id: Option<String>,
     /// A list of parameters that are applicable for this operation. If a
     /// parameter is already defined at the [Path Item], the new definition will
@@ -347,6 +396,7 @@ pub struct Operation {
     /// [location]: Parameter::in
     /// [Reference Object]: Reference
     /// [OpenAPI Object's components/parameters]: Components::parameters
+    #[serde(default)]
     pub parameters: Vec<Reference<Parameter>>,
     /// The request body applicable for this operation. The `request_body` is
     /// fully supported in HTTP methods where the HTTP 1.1 specification
@@ -359,9 +409,11 @@ pub struct Operation {
     /// [GET]: https://tools.ietf.org/html/rfc7231#section-4.3.1
     /// [HEAD]: https://tools.ietf.org/html/rfc7231#section-4.3.2
     /// [DELETE]: https://tools.ietf.org/html/rfc7231#section-4.3.5
+    #[serde(default)]
     pub request_body: Option<Reference<RequestBody>>,
     /// The list of possible responses as they are returned from executing this
     /// operation.
+    #[serde(default)]
     pub responses: Option<Responses>,
     /// A map of possible out-of band callbacks related to the parent operation.
     /// The key is a unique identifier for the Callback Object. Each value in
@@ -369,6 +421,7 @@ pub struct Operation {
     /// initiated by the API provider and the expected responses.
     ///
     /// [Callback Object]: Callback
+    #[serde(default)]
     pub callbacks: HashMap<String, Reference<Callback>>,
     /// Declares this operation to be deprecated. Consumers SHOULD refrain from
     /// usage of the declared operation. Default value is `false`.
@@ -383,6 +436,7 @@ pub struct Operation {
     /// top-level security declaration, an empty array can be used.
     ///
     /// [`security`]: Spec::security
+    #[serde(default)]
     pub security: Vec<SecurityRequirement>,
     /// An alternative `server` array to service this operation. If an
     /// alternative `server` object is specified at the [Path Item Object] or
@@ -390,6 +444,7 @@ pub struct Operation {
     ///
     /// [Path Item Object]: PathItem
     /// [Root]: Spec
+    #[serde(default)]
     pub servers: Vec<Server>,
 }
 
@@ -401,6 +456,7 @@ pub struct ExternalDocument {
     /// used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// The URL for the target documentation. This MUST be in the form of a URL.
     pub url: String,
@@ -436,6 +492,7 @@ pub struct Parameter {
     /// use. [CommonMark syntax] MAY be used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// Determines whether this parameter is mandatory. If the [parameter
     /// location] is `"path"`, this property is **REQUIRED** and its value MUST
@@ -443,9 +500,11 @@ pub struct Parameter {
     /// is `false`.
     ///
     /// [parameter location]: Parameter::in
+    #[serde(default)]
     pub required: bool,
     /// Specifies that a parameter is deprecated and SHOULD be transitioned out
     /// of usage. Default value is `false`.
+    #[serde(default)]
     pub deprecated: bool,
     /// Sets the ability to pass empty-valued parameters. This is valid only for
     /// `query` parameters and allows sending a parameter with an empty value.
@@ -455,6 +514,7 @@ pub struct Parameter {
     /// removed in a later revision.
     ///
     /// [`style`]: Parameter::style
+    #[serde(default)]
     pub allow_empty_value: bool,
     /// Describes how the parameter value will be serialized depending on the
     /// type of the parameter value.
@@ -464,6 +524,7 @@ pub struct Parameter {
     ///  * for `path` - `simple`
     ///  * for `header` - `simple`
     ///  * for `cookie` - `form`
+    #[serde(default)]
     pub style: Option<ParameterStyle>,
     /// When this is true, parameter values of type `array` or `object` generate
     /// separate parameters for each value of the array or key-value pair of the
@@ -472,6 +533,7 @@ pub struct Parameter {
     /// the default value is `false`.
     ///
     /// [`style`]: Parameter::style
+    #[serde(default)]
     pub explode: bool,
     /// Determines whether the parameter value SHOULD allow reserved characters,
     /// as defined by [RFC3986] `:/?#[]@!$&'()*+,;=` to be included without
@@ -479,8 +541,10 @@ pub struct Parameter {
     /// value of `query`. The default value is `false`.
     ///
     /// [RFC3986]: (https://tools.ietf.org/html/rfc3986#section-2.2)
+    #[serde(default)]
     pub allow_reserved: bool,
     /// The schema defining the type used for the parameter.
+    #[serde(default)]
     pub schema: Option<Schema>,
     /// Example of the parameter's potential value. The example SHOULD match the
     /// specified schema and encoding properties if present. The `example` field
@@ -490,16 +554,19 @@ pub struct Parameter {
     /// examples of media types that cannot naturally be represented in JSON or
     /// YAML, a string value can contain the example with escaping where
     /// necessary.
+    #[serde(default)]
     pub example: Any,
     /// Examples of the parameter's potential value. Each example SHOULD contain
     /// a value in the correct format as specified in the parameter encoding.
     /// The `examples` field is mutually exclusive of the `example` field.
     /// Furthermore, if referencing a `schema` that contains an example, the
     /// `examples` value SHALL _override_ the example provided by the schema.
+    #[serde(default)]
     pub examples: HashMap<String, Reference<Example>>,
     /// A map containing the representations for the parameter. The key is the
     /// media type and the value describes it. The map MUST only contain one
     /// entry.
+    #[serde(default)]
     pub content: HashMap<String, MediaType>,
 }
 
@@ -589,6 +656,7 @@ pub struct RequestBody {
     /// use. [CommonMark syntax] MAY be used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// The content of the request body. The key is a media type or [media type
     /// range] and the value describes it. For requests that match multiple
@@ -599,6 +667,7 @@ pub struct RequestBody {
     pub content: HashMap<String, MediaType>,
     /// Determines if the request body is required in the request. Defaults to
     /// `false`.
+    #[serde(default)]
     pub required: bool,
 }
 
@@ -608,23 +677,27 @@ pub struct RequestBody {
 #[serde(rename_all = "camelCase")]
 pub struct MediaType {
     /// The schema defining the content of the request, response, or parameter.
+    #[serde(default)]
     pub schema: Option<Schema>,
     /// Example of the media type. The example object SHOULD be in the correct
     /// format as specified by the media type. The `example` field is mutually
     /// exclusive of the `examples` field. Furthermore, if referencing a
     /// `schema` which contains an example, the `example` value SHALL _override_
     /// the example provided by the schema.
+    #[serde(default)]
     pub example: Any,
     /// Examples of the media type. Each example object SHOULD match the media
     /// type and specified schema if present. The `examples` field is mutually
     /// exclusive of the `example` field. Furthermore, if referencing a `schema`
     /// which contains an example, the `examples` value SHALL _override_ the
     /// example provided by the schema.
+    #[serde(default)]
     pub examples: HashMap<String, Reference<Example>>,
     /// A map between a property name and its encoding information. The key,
     /// being the property name, MUST exist in the schema as a property. The
     /// encoding object SHALL only apply to `requestBody` objects when the media
     /// type is `multipart` or `application/x-www-form-urlencoded`.
+    #[serde(default)]
     pub encoding: HashMap<String, Encoding>,
 }
 
@@ -641,11 +714,13 @@ pub struct Encoding {
     /// The value can be a specific media type (e.g. `application/json`), a
     /// wildcard media type (e.g. `image/*`), or a comma-separated list of the
     /// two types.
+    #[serde(default)]
     pub content_type: Option<String>,
     /// A map allowing additional information to be provided as headers, for
     /// example `Content-Disposition`. `Content-Type` is described separately
     /// and SHALL be ignored in this section. This property SHALL be ignored if
     /// the request body media type is not a `multipart`.
+    #[serde(default)]
     pub headers: HashMap<String, Reference<Header>>,
     /// Describes how a specific property value will be serialized depending on
     /// its type. See [Parameter Object] for details on the [`style`] property.
@@ -658,7 +733,8 @@ pub struct Encoding {
     /// [Parameter Object]: Parameter
     /// [`style`]: Parameter::style
     /// [`content_type`]: Encoding::content_type
-    pub style: ParameterStyle,
+    #[serde(default)]
+    pub style: Option<ParameterStyle>,
     /// When this is true, property values of type `array` or `object` generate
     /// separate parameters for each value of the array, or key-value-pair of
     /// the map. For other types of properties this property has no effect. When
@@ -670,6 +746,7 @@ pub struct Encoding {
     ///
     /// [`style`]: Encoding::style
     /// [`content_type`]: Encoding::content_type
+    #[serde(default)]
     pub explode: bool,
     /// Determines whether the parameter value SHOULD allow reserved characters,
     /// as defined by [RFC3986] `:/?#[]@!$&'()*+,;=` to be included without
@@ -681,6 +758,7 @@ pub struct Encoding {
     ///
     /// [RFC3986]: https://tools.ietf.org/html/rfc3986#section-2.2
     /// [`content_type`]: Encoding::content_type
+    #[serde(default)]
     pub allow_reserved: bool,
 }
 
@@ -704,6 +782,7 @@ pub struct Encoding {
 pub struct Responses {
     /// The documentation of responses other than the ones declared for specific
     /// HTTP response codes. Use this field to cover undeclared responses.
+    #[serde(default)]
     pub default: Option<Reference<Response>>,
     /// Any HTTP status code can be used as the property name, but only one
     /// property per code, to describe the expected response for that HTTP
@@ -717,7 +796,7 @@ pub struct Responses {
     /// and `5XX`. If a response is defined using an explicit code, the explicit
     /// code definition takes precedence over the range definition for that
     /// code.
-    #[serde(flatten)]
+    #[serde(flatten, default)]
     pub response: HashMap<u16, Reference<Response>>,
 }
 
@@ -736,6 +815,7 @@ pub struct Response {
     /// `"Content-Type"`, it SHALL be ignored.
     ///
     /// [RFC7230]: https://tools.ietf.org/html/rfc7230#page-22
+    #[serde(default)]
     pub headers: HashMap<String, Reference<Header>>,
     /// A map containing descriptions of potential response payloads. The key is
     /// a media type or [media type range] and the value describes it. For
@@ -743,12 +823,14 @@ pub struct Response {
     /// applicable. e.g. `text/plain` overrides `text/*`.
     ///
     /// [media type range]: https://tools.ietf.org/html/rfc7231#appendix-D
+    #[serde(default)]
     pub content: HashMap<String, MediaType>,
     /// A map of operations links that can be followed from the response. The
     /// key of the map is a short name for the link, following the naming
     /// constraints of the names for [Component Objects].
     ///
     /// [Component Objects]: Components
+    #[serde(default)]
     pub links: HashMap<String, Reference<Link>>,
 }
 
@@ -771,6 +853,7 @@ pub struct Response {
 pub struct Callback {
     /// A Path Item Object, or a reference to one, used to define a callback
     /// request and expected responses.
+    #[serde(default)]
     pub expressions: HashMap<String, Reference<PathItem>>,
 }
 
@@ -784,21 +867,25 @@ pub struct Callback {
 #[serde(rename_all = "camelCase")]
 pub struct Example {
     /// Short description for the example.
+    #[serde(default)]
     pub summary: Option<String>,
     /// Long description for the example. [CommonMark syntax] MAY be used for
     /// rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// Embedded literal example. The `value` field and `externalValue` field
     /// are mutually exclusive. To represent examples of media types that cannot
     /// naturally represented in JSON or YAML, use a string value to contain the
     /// example, escaping where necessary.
+    #[serde(default)]
     pub value: Any,
     /// A URI that points to the literal example. This provides the capability
     /// to reference examples that cannot easily be included in JSON or YAML
     /// documents. The `value` field and `externalValue` field are mutually
     /// exclusive.
+    #[serde(default)]
     pub external_value: String,
 }
 
@@ -832,10 +919,12 @@ pub struct Link {
     /// an existing [Operation Object] in the OpenAPI definition.
     ///
     /// [Operation Object]: Operation
+    #[serde(default)]
     pub operation_ref: Option<String>,
     /// The name of an _existing_, resolvable OAS operation, as defined with a
     /// unique `operationId`. This field is mutually exclusive of the
     /// `operationRef` field.
+    #[serde(default)]
     pub operation_id: Option<String>,
     /// A map representing parameters to pass to an operation as specified with
     /// `operationId` or identified via `operationRef`. The key is the parameter
@@ -846,18 +935,22 @@ pub struct Link {
     /// path.id).
     ///
     /// [parameter location]: Parameter::in
+    #[serde(default)]
     pub parameters: HashMap<String, RuntimeExpression>, // TODO: or `Any`.
     /// A literal value or [{expression}] to use as a request body when calling
     /// the target operation.
     ///
     /// [{expression}]: RuntimeExpression
+    #[serde(default)]
     pub request_body: Option<RuntimeExpression>, // TODO: or `Any`.
     /// A description of the link. [CommonMark syntax] MAY be used for rich text
     /// representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// A server object to be used by the target operation.
+    #[serde(default)]
     pub server: Option<Server>,
 }
 
@@ -919,6 +1012,7 @@ pub struct Header {
     /// use. [CommonMark syntax] MAY be used for rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// Determines whether this parameter is mandatory. If the [parameter
     /// location] is `"path"`, this property is **REQUIRED** and its value MUST
@@ -926,16 +1020,20 @@ pub struct Header {
     /// is `false`.
     ///
     /// [parameter location]: Parameter::in
+    #[serde(default)]
     pub required: bool,
     /// Specifies that a parameter is deprecated and SHOULD be transitioned out
     /// of usage. Default value is `false`.
+    #[serde(default)]
     pub deprecated: bool,
     /// Describes how the parameter value will be serialized depending on the
     /// type of the parameter value.
     ///
     /// Default value is `simple`.
+    #[serde(default)]
     pub style: Option<HeaderStyle>,
     /// The schema defining the type used for the parameter.
+    #[serde(default)]
     pub schema: Option<Schema>,
     /// Example of the parameter's potential value. The example SHOULD match the
     /// specified schema and encoding properties if present. The `example` field
@@ -945,16 +1043,19 @@ pub struct Header {
     /// examples of media types that cannot naturally be represented in JSON or
     /// YAML, a string value can contain the example with escaping where
     /// necessary.
+    #[serde(default)]
     pub example: Any,
     /// Examples of the parameter's potential value. Each example SHOULD contain
     /// a value in the correct format as specified in the parameter encoding.
     /// The `examples` field is mutually exclusive of the `example` field.
     /// Furthermore, if referencing a `schema` that contains an example, the
     /// `examples` value SHALL _override_ the example provided by the schema.
+    #[serde(default)]
     pub examples: HashMap<String, Reference<Example>>,
     /// A map containing the representations for the parameter. The key is the
     /// media type and the value describes it. The map MUST only contain one
     /// entry.
+    #[serde(default)]
     pub content: HashMap<String, MediaType>,
 }
 
@@ -990,8 +1091,10 @@ pub struct Tag {
     /// representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// Additional external documentation for this tag.
+    #[serde(default)]
     pub external_docs: Option<ExternalDocument>,
 }
 
@@ -1013,6 +1116,7 @@ pub enum Reference<T> {
         /// A short summary which by default SHOULD override that of the
         /// referenced component. If the referenced object-type does not allow a
         /// `summary` field, then this field has no effect.
+        #[serde(default)]
         summary: Option<String>,
         /// A description which by default SHOULD override that of the
         /// referenced component. [CommonMark syntax] MAY be used for rich text
@@ -1020,6 +1124,7 @@ pub enum Reference<T> {
         /// `description` field, then this field has no effect.
         ///
         /// [CommonMark syntax]: https://spec.commonmark.org
+        #[serde(default)]
         description: Option<String>,
     },
     /// Inline object `T`.
@@ -1062,7 +1167,7 @@ pub struct Schema {
     /// support.
     ///
     /// [URI]: https://datatracker.ietf.org/doc/html/rfc3986
-    #[serde(rename = "$schema")]
+    #[serde(rename = "$schema", default)]
     pub schema: Option<String>,
     /// The `$id` keyword identifies a schema resource with its canonical [RFC
     /// 6596] URI.
@@ -1072,7 +1177,7 @@ pub struct Schema {
     /// downloadable from its canonical URI.
     ///
     /// [RFC 6596]: https://datatracker.ietf.org/doc/html/rfc6596
-    #[serde(rename = "$id")]
+    #[serde(rename = "$id", default)]
     pub id: Option<String>,
     /// The `$ref` keyword is an applicator that is used to reference a
     /// statically identified schema. Its results are the results of the
@@ -1083,7 +1188,7 @@ pub struct Schema {
     /// the schema to apply. This resolution is safe to perform on schema load,
     /// as the process of evaluating an instance cannot change how the reference
     /// resolves.
-    #[serde(rename = "$ref")]
+    #[serde(rename = "$ref", default)]
     pub r#ref: Option<String>,
     /// This keyword reserves a location for comments from schema authors to
     /// readers or maintainers of the schema.
@@ -1092,24 +1197,28 @@ pub struct Schema {
     /// editing schemas SHOULD support displaying and editing this keyword. The
     /// value of this keyword MAY be used in debug or error output which is
     /// intended for developers making use of schemas.
-    #[serde(rename = "$comment")]
+    #[serde(rename = "$comment", default)]
     pub comment: Option<String>,
 
     // JSON Schema Section 10.2.1. Keywords for Applying Subschemas With Logic
     /// An instance validates successfully against this keyword if it validates
     /// successfully against all schemas defined by this keyword's value.
+    #[serde(default)]
     pub all_of: Option<Vec<Schema>>,
     /// An instance validates successfully against this keyword if it validates
     /// successfully against at least one schema defined by this keyword's
     /// value. Note that when annotations are being collected, all subschemas
     /// MUST be examined so that annotations are collected from each subschema
     /// that validates successfully.
+    #[serde(default)]
     pub any_of: Option<Vec<Schema>>,
     /// An instance validates successfully against this keyword if it validates
     /// successfully against exactly one schema defined by this keyword's value.
+    #[serde(default)]
     pub one_of: Option<Vec<Schema>>,
     /// An instance is valid against this keyword if it fails to validate
     /// successfully against the schema defined by this keyword.
+    #[serde(default)]
     pub not: Option<Box<Schema>>,
 
     // JSON Schema Section 10.2.2. Keywords for Applying Subschemas
@@ -1125,6 +1234,7 @@ pub struct Schema {
     /// Instances that fail to validate against this keyword's subschema MUST
     /// also be valid against the subschema value of the `else` keyword, if
     /// present.
+    #[serde(default)]
     pub r#if: Option<Box<Schema>>,
     /// When `if` is present, and the instance successfully validates against
     /// its subschema, then validation succeeds against this keyword if the
@@ -1134,6 +1244,7 @@ pub struct Schema {
     /// fails to validate against its subschema. Implementations MUST NOT
     /// evaluate the instance against this keyword, for either validation or
     /// annotation collection purposes, in such cases.
+    #[serde(default)]
     pub then: Option<Box<Schema>>,
     /// When `if` is present, and the instance fails to validate against its
     /// subschema, then validation succeeds against this keyword if the instance
@@ -1143,6 +1254,7 @@ pub struct Schema {
     /// successfully validates against its subschema. Implementations MUST NOT
     /// evaluate the instance against this keyword, for either validation or
     /// annotation collection purposes, in such cases.
+    #[serde(default)]
     pub r#else: Option<Box<Schema>>,
     /// This keyword specifies subschemas that are evaluated if the instance is
     /// an object and contains a certain property.
@@ -1152,6 +1264,7 @@ pub struct Schema {
     /// presence of the property.
     ///
     /// Omitting this keyword has the same behavior as an empty object.
+    #[serde(default)]
     pub dependent_schemas: HashMap<String, Schema>,
 
     // JSON Schema Section 10.3.1. Keywords for Applying Subschemas to Arrays
@@ -1167,6 +1280,7 @@ pub struct Schema {
     /// `items` and `unevaluated_items`.
     ///
     /// Omitting this keyword has the same assertion behavior as an empty array.
+    #[serde(default)]
     pub prefix_items: Vec<Schema>,
     /// This keyword applies its subschema to all instance elements at indexes
     /// greater than the length of the `prefix_iItems` array in the same schema
@@ -1186,6 +1300,7 @@ pub struct Schema {
     /// another way that produces the same effect, such as by directly checking
     /// for the presence and size of a `prefix_items` array. Implementations
     /// that do not support annotation collection MUST do so.
+    #[serde(default)]
     pub items: Vec<Schema>,
     /// An array instance is valid against `contains` if at least one of its
     /// elements is valid against the given schema. The subschema MUST be
@@ -1202,6 +1317,7 @@ pub struct Schema {
     /// subschema validates successfully when applied to every index of the
     /// instance. The annotation MUST be present if the instance array to which
     /// this keyword's schema applies is empty.
+    #[serde(default)]
     pub contains: Option<Box<Schema>>,
 
     // JSON Schema Section 10.3.2. Keywords for Applying Subschemas to Objects
@@ -1214,6 +1330,7 @@ pub struct Schema {
     ///
     /// Omitting this keyword has the same assertion behavior as an empty
     /// object.
+    #[serde(default)]
     pub properties: Option<Box<Schema>>,
     /// Each property name of this object SHOULD be a valid regular expression,
     /// according to the ECMA-262 regular expression dialect. Each property
@@ -1229,6 +1346,7 @@ pub struct Schema {
     ///
     /// Omitting this keyword has the same assertion behavior as an empty
     /// object.
+    #[serde(default)]
     pub pattern_properties: HashMap<String, Schema>,
     /// The behavior of this keyword depends on the presence and annotation
     /// results of `properties` and `pattern_properties` within the same schema
@@ -1250,12 +1368,14 @@ pub struct Schema {
     /// the names in `properties` and the patterns in `pattern_properties`
     /// against the instance property set. Implementations that do not support
     /// annotation collection MUST do so.
+    #[serde(default)]
     pub additional_properties: Option<Box<Schema>>,
     /// If the instance is an object, this keyword validates if every property
     /// name in the instance validates against the provided schema. Note the
     /// property name that the schema is testing will always be a string.
     ///
     /// Omitting this keyword has the same behavior as an empty schema.
+    #[serde(default)]
     pub property_names: Option<Box<Schema>>,
 
     // JSON Schema Section 11. A Vocabulary for Unevaluated Locations
@@ -1287,6 +1407,7 @@ pub struct Schema {
     ///
     /// Omitting this keyword has the same assertion behavior as an empty
     /// schema.
+    #[serde(default)]
     pub unevaluated_items: Option<Box<Schema>>,
     /// The behavior of this keyword depends on the annotation results of
     /// adjacent keywords that apply to the instance location being validated.
@@ -1317,6 +1438,7 @@ pub struct Schema {
     ///
     /// Omitting this keyword has the same assertion behavior as an empty
     /// schema.
+    #[serde(default)]
     pub unevaluated_properties: Option<Box<Schema>>,
 
     // JSON Schema Validation Section 6.1. Validation Keywords for Any Instance
@@ -1324,53 +1446,66 @@ pub struct Schema {
     /// Data type.
     pub r#type: Vec<Type>, // TODO: one or array.
     /// Valid values for this schema.
+    #[serde(default)]
     pub r#enum: Vec<String>,
     /// Use of this keyword is functionally equivalent to an [`enum`] with a
     /// single value.
     ///
     /// [`enum`]: Schema::enum
+    #[serde(default)]
     pub r#const: Option<String>,
 
     // JSON Schema Validation Section 6.2. Validation Keywords for Numeric
     // Instances (number and integer)
     /// A numeric instance is valid only if division by this keyword's value
     /// results in an integer.
+    #[serde(default)]
     pub multiple_of: Option<f64>,
     /// If the instance is a number, then this keyword validates only if the
     /// instance is less than or exactly equal to `maximum`.
+    #[serde(default)]
     pub maximum: Option<f64>,
     /// If the instance is a number, then the instance is valid only if it has a
     /// value strictly less than (not equal to) `exclusiveMaximum`.
+    #[serde(default)]
     pub exclusive_maximum: Option<f64>,
     /// If the instance is a number, then this keyword validates only if the
     /// instance is greater than or exactly equal to `minimum`.
+    #[serde(default)]
     pub minimum: Option<f64>,
     /// If the instance is a number, then the instance is valid only if it has a
     /// value strictly greater than (not equal to) `exclusiveMinimum`.
+    #[serde(default)]
     pub exclusive_minimum: Option<f64>,
 
     // JSON Schema Validation Section 6.3. Validation Keywords for Strings
     /// A string instance is valid against this keyword if its length is less
     /// than, or equal to, the value of this keyword.
+    #[serde(default)]
     pub max_length: Option<usize>,
     /// A string instance is valid against this keyword if its length is greater
     /// than, or equal to, the value of this keyword.
+    #[serde(default)]
     pub min_length: Option<usize>,
     /// A string instance is considered valid if the regular expression matches
     /// the instance successfully. Recall: regular expressions are not
     /// implicitly anchored.
+    #[serde(default)]
     pub pattern: Option<String>,
 
     // JSON Schema Validation Section 6.4. Validation Keywords for Arrays
     /// An array instance is valid against `maxItems` if its size is less than,
     /// or equal to, the value of this keyword.
+    #[serde(default)]
     pub max_items: Option<usize>,
     /// An array instance is valid against `minItems` if its size is greater
     /// than, or equal to, the value of this keyword.
+    #[serde(default)]
     pub min_items: Option<usize>,
     /// If this keyword has boolean value false, the instance validates
     /// successfully. If it has boolean value true, the instance validates
     /// successfully if all of its elements are unique.
+    #[serde(default)]
     pub unique_ttems: bool,
     /// If `contains` is not present within the same schema object, then this
     /// keyword has no effect.
@@ -1382,6 +1517,7 @@ pub struct Schema {
     /// `maxContains` value. The second way is if the annotation result is a
     /// boolean `true` and the instance array length is less than or equal to
     /// the `maxContains` value.
+    #[serde(default)]
     pub max_contains: Option<usize>,
     /// If `contains` is not present within the same schema object, then this
     /// keyword has no effect.
@@ -1399,21 +1535,25 @@ pub struct Schema {
     /// `maxContains` causes `contains` to always pass validation.
     ///
     /// Omitting this keyword has the same behavior as a value of 1.
+    #[serde(default)]
     pub min_contains: Option<usize>,
 
     // JSON Schema Validation Section 6.5. Validation Keywords for Objects
     /// An object instance is valid against `maxProperties` if its number of
     /// properties is less than, or equal to, the value of this keyword.
+    #[serde(default)]
     pub max_properties: Option<usize>,
     /// An object instance is valid against `minProperties` if its number of
     /// properties is greater than, or equal to, the value of this keyword.
     ///
     /// Omitting this keyword has the same behavior as a value of 0.
+    #[serde(default)]
     pub min_properties: Option<usize>,
     /// An object instance is valid against this keyword if every item in the
     /// array is the name of a property in the instance.
     ///
     /// Omitting this keyword has the same behavior as an empty array.
+    #[serde(default)]
     pub required: Vec<String>,
     /// This keyword specifies properties that are required if a specific other
     /// property is present. Their requirement is dependent on the presence of
@@ -1424,6 +1564,7 @@ pub struct Schema {
     /// corresponding array is also the name of a property in the instance.
     ///
     /// Omitting this keyword has the same behavior as an empty object.
+    #[serde(default)]
     pub dependent_required: HashMap<String, Vec<String>>,
 
     // JSON Schema Validation Section 7. Vocabularies for Semantic Content With
@@ -1432,6 +1573,7 @@ pub struct Schema {
     /// convey semantic information for a fixed subset of values which are
     /// accurately described by authoritative resources, be they RFCs or other
     /// external specifications.
+    #[serde(default)]
     pub format: Option<Format>,
 
     // JSON Schema Validation Section 8. A Vocabulary for the Contents of
@@ -1456,6 +1598,7 @@ pub struct Schema {
     ///
     /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648
     /// [RFC 2045]: https://datatracker.ietf.org/doc/html/rfc2045
+    #[serde(default)]
     pub content_encoding: Option<String>,
     /// If the instance is a string, this property indicates the media type of
     /// the contents of the string. If `content_encoding` is present, this
@@ -1465,6 +1608,7 @@ pub struct Schema {
     /// as defined by [RFC 2046].
     ///
     /// [RFC 2046]: https://datatracker.ietf.org/doc/html/rfc2046
+    #[serde(default)]
     pub content_media_type: Option<String>,
     /// If the instance is a string, and if `content_media_type` is present,
     /// this property contains a schema which describes the structure of the
@@ -1475,22 +1619,26 @@ pub struct Schema {
     ///
     /// The value of this property MUST be a valid JSON schema. It SHOULD be
     /// ignored if `content_media_type` is not present.
+    #[serde(default)]
     pub content_schema: Option<Box<Schema>>,
 
     // JSON Schema Validation Section 9. A Vocabulary for Basic Meta-Data
     // Annotations
     /// A title will preferably be short explanation about the purpose of the
     /// instance described by this schema.
+    #[serde(default)]
     pub title: Option<String>,
     /// A description will provide explanation about the purpose of the instance
     /// described by this schema. [CommonMark syntax] MAY be used for rich text
     /// representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// This keyword can be used to supply a default JSON value associated with
     /// a particular schema. It is RECOMMENDED that a default value be valid
     /// against the associated schema.
+    #[serde(default)]
     pub default: Option<Any>,
     /// If `deprecated` has a value of boolean true, it indicates that
     /// applications SHOULD refrain from usage of the declared property. It MAY
@@ -1505,6 +1653,7 @@ pub struct Schema {
     /// deprecated even though the containing array or object is not.
     ///
     /// Omitting this keyword has the same behavior as a value of false.
+    #[serde(default)]
     pub deprecated: bool,
     /// If `read_only` has a value of boolean true, it indicates that the value
     /// of the instance is managed exclusively by the owning authority, and
@@ -1516,6 +1665,7 @@ pub struct Schema {
     /// in an error, at the authority's discretion.
     ///
     /// Omitting this keyword has the same behavior as values of false.
+    #[serde(default)]
     pub read_only: bool,
     /// If `write_only` has a value of boolean true, it indicates that the value
     /// is never present when the instance is retrieved from the owning
@@ -1529,6 +1679,7 @@ pub struct Schema {
     /// at the authority's discretion.
     ///
     /// Omitting this keyword has the same behavior as values of false.
+    #[serde(default)]
     pub write_only: bool,
     /// This keyword can be used to provide sample JSON values associated with a
     /// particular schema, for the purpose of illustrating usage. It is
@@ -1537,18 +1688,22 @@ pub struct Schema {
     /// Implementations MAY use the value(s) of `default`, if present, as an
     /// additional example. If `examples` is absent, `default` MAY still be used
     /// in this manner.
+    #[serde(default)]
     pub examples: Vec<Any>,
 
     // OpenAPI spec extension.
     /// Adds support for polymorphism. The discriminator is an object name that
     /// is used to differentiate between other schemas which may satisfy the
     /// payload description.
+    #[serde(default)]
     pub discriminator: Option<Discriminator>,
     /// This MAY be used only on properties schemas. It has no effect on root
     /// schemas. Adds additional metadata to describe the XML representation of
     /// this property.
+    #[serde(default)]
     pub xml: Option<Xml>,
     /// Additional external documentation for this schema.
+    #[serde(default)]
     pub external_docs: Option<ExternalDocument>,
     /// A free-form property to include an example of an instance for this
     /// schema. To represent examples that cannot be naturally represented in
@@ -1558,6 +1713,7 @@ pub struct Schema {
     /// **Deprecated:** The `example` property has been deprecated in favor of
     /// the JSON Schema `examples` keyword. Use of `example` is discouraged, and
     /// later versions of this specification may remove it.
+    #[serde(default)]
     pub example: Any,
     /// Allows the schema to be extended. The value can be `null`/`None`, a
     /// primitive, an array or an object.
@@ -1749,6 +1905,7 @@ pub struct Discriminator {
     pub property_name: String,
     /// An object to hold mappings between payload values and schema names or
     /// references.
+    #[serde(default)]
     pub mapping: HashMap<String, String>,
 }
 
@@ -1767,22 +1924,27 @@ pub struct Xml {
     /// being `array` (outside the `items`), it will affect the wrapping element
     /// and only if `wrapped` is `true`. If `wrapped` is `false`, it will be
     /// ignored.
+    #[serde(default)]
     pub name: Option<String>,
     /// The URI of the namespace definition. This MUST be in the form of an
     /// absolute URI.
+    #[serde(default)]
     pub namespace: Option<String>,
     /// The prefix to be used for the [`name`].
     ///
     /// [`name`]: Xml::name
+    #[serde(default)]
     pub prefix: Option<String>,
     /// Declares whether the property definition translates to an attribute
     /// instead of an element. Default value is `false`.
+    #[serde(default)]
     pub attribute: bool,
     /// MAY be used only for an array definition. Signifies whether the array is
     /// wrapped (for example, `<books><book/><book/></books>`) or unwrapped
     /// (`<book/><book/>`). Default value is `false`. The definition takes
     /// effect only when defined alongside `type` being `array` (outside the
     /// `items`).
+    #[serde(default)]
     pub wrapped: bool,
 }
 
@@ -1810,14 +1972,17 @@ pub struct SecurityScheme {
     /// rich text representation.
     ///
     /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
     pub description: Option<String>,
     /// The name of the header, query or cookie parameter to be used.
     ///
     /// Required for [`SecuritySchemeType::ApiKey`].
+    #[serde(default)]
     pub name: Option<String>,
     /// The location of the API key.
     ///
     /// Required for [`SecuritySchemeType::ApiKey`].
+    #[serde(default)]
     pub r#in: Option<SecuritySchemeIn>,
     /// The name of the HTTP Authorization scheme to be used in the
     /// [Authorization header as defined in RFC7235]. The values used SHOULD be
@@ -1827,23 +1992,27 @@ pub struct SecurityScheme {
     ///
     /// [Authorization header as defined in RFC7235]: https://tools.ietf.org/html/rfc7235#section-5.1
     /// [IANA Authentication Scheme registry]: https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
+    #[serde(default)]
     pub scheme: Option<String>,
     /// A hint to the client to identify how the bearer token is formatted.
     /// Bearer tokens are usually generated by an authorization server, so this
     /// information is primarily for documentation purposes.
     ///
     /// Required for [`SecuritySchemeType::Http`] (`"bearer"`).
+    #[serde(default)]
     pub bearer_format: Option<String>,
     /// An object containing configuration information for the flow types
     /// supported.
     ///
     /// Required for [`SecuritySchemeType::Oauth2`].
-    pub flows: OauthFlows,
+    #[serde(default)]
+    pub flows: Option<OauthFlows>,
     /// OpenId Connect URL to discover OAuth2 configuration values. This MUST be
     /// in the form of a URL. The OpenID Connect standard requires the use of
     /// TLS.
     ///
     /// Required for [`SecuritySchemeType::OpenIdConnect`].
+    #[serde(default)]
     pub open_id_connect_url: Option<String>,
 }
 
@@ -1878,14 +2047,18 @@ pub enum SecuritySchemeIn {
 #[serde(rename_all = "camelCase")]
 pub struct OauthFlows {
     /// Configuration for the OAuth Implicit flow
+    #[serde(default)]
     pub implicit: Option<OauthFlow>,
     /// Configuration for the OAuth Resource Owner Password flow
+    #[serde(default)]
     pub password: Option<OauthFlow>,
     /// Configuration for the OAuth Client Credentials flow. Previously called
     /// `application` in OpenAPI 2.0.
+    #[serde(default)]
     pub client_credentials: Option<OauthFlow>,
     /// Configuration for the OAuth Authorization Code flow. Previously called
     /// `accessCode` in OpenAPI 2.0.
+    #[serde(default)]
     pub authorization_code: Option<OauthFlow>,
 }
 
@@ -1906,6 +2079,7 @@ pub struct OauthFlow {
     pub token_url: String,
     /// The URL to be used for obtaining refresh tokens. This MUST be in the
     /// form of a URL. The OAuth2 standard requires the use of TLS.
+    #[serde(default)]
     pub refresh_url: Option<String>,
     /// The available scopes for the OAuth2 security scheme. A map between the
     /// scope name and a short description for it. The map MAY be empty.
@@ -1927,27 +2101,19 @@ pub struct OauthFlow {
 /// Object] or [Operation Object], only one of the Security Requirement Objects
 /// in the list needs to be satisfied to authorize the request.
 ///
+/// Each name MUST correspond to a security scheme which is declared in the
+/// [Security Schemes] under the [Components Object]. If the security scheme is
+/// of type `"oauth2"` or `"openIdConnect"`, then the value is a list of scope
+/// names required for the execution, and the list MAY be empty if authorization
+/// does not require a specified scope. For other security scheme types, the
+/// array MAY contain a list of role names which are required for the execution,
+/// but are not otherwise defined or exchanged in-band.
+///
 /// [Security Schemes]: Components::security_schemes
 /// [Components Object]: Components
 /// [OpenAPI Object]: Spec
 /// [Operation Object]: Operation
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SecurityRequirement {
-    /// Each name MUST correspond to a security scheme which is declared in the
-    /// [Security Schemes] under the [Components Object]. If the security scheme
-    /// is of type `"oauth2"` or `"openIdConnect"`, then the value is a list of
-    /// scope names required for the execution, and the list MAY be empty if
-    /// authorization does not require a specified scope. For other security
-    /// scheme types, the array MAY contain a list of role names which are
-    /// required for the execution, but are not otherwise defined or exchanged
-    /// in-band.
-    ///
-    /// [Security Schemes]: Components::security_schemes
-    /// [Components Object]: Components
-    #[serde(flatten)]
-    pub names: HashSet<String>,
-}
+pub type SecurityRequirement = HashMap<String, Vec<String>>;
 
 /// Any value.
 ///
