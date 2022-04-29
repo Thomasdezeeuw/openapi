@@ -15,6 +15,14 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
+mod parse;
+#[cfg(any(feature = "json", feature = "yaml"))]
+pub use parse::read_from_file;
+#[cfg(feature = "json")]
+pub use parse::read_from_json_file;
+#[cfg(feature = "yaml")]
+pub use parse::read_from_yaml_file;
+
 /// This is the root object of the OpenAPI document.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

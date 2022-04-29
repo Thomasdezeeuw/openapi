@@ -3,5 +3,17 @@ name = "openapi"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["json", "yaml"]
+# Enable parsing of JSON files.
+json = ["serde_json"]
+# Enable parsing of YAML files.
+yaml = ["serde_yaml"]
+
 [dependencies]
 serde = { version = "1.0.136", default-features = false, features = ["std", "derive"] }
+
+# Used by `json` feature.
+serde_json = { version = "1.0.79", default-features = false, features = ["std"], optional = true }
+# Used by `yaml` feature.
+serde_yaml = { version = "0.8.23", default-features = false, optional = true }
