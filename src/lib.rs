@@ -1,8 +1,11 @@
 //! Open API Specification
 //!
-//! Currently this only supports [OpenAPI Specification v3.1.0].
-//!
 //! The main type is  [`Spec`], which represents an OpenAPI specification.
+//!
+//! Currently this only supports [OpenAPI Specification v3.1.0]. Note that it
+//! can parse *some* OpenAPI v3.0.x specs, but not all as v3.1 contains breaking
+//! changes (e.g. `additionalProperties` previously accepted a boolean, which is
+//! no longer the case).
 //!
 //! [OpenAPI Specification v3.1.0]: https://spec.openapis.org/oas/v3.1.0.html
 
@@ -91,6 +94,18 @@ pub struct Spec {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Version {
+    /// Version `3.0.0`.
+    #[serde(rename = "3.0.0")]
+    OpenApi3_0,
+    /// Version `3.0.1`.
+    #[serde(rename = "3.0.1")]
+    OpenApi3_0_1,
+    /// Version `3.0.2`.
+    #[serde(rename = "3.0.2")]
+    OpenApi3_0_2,
+    /// Version `3.0.3`.
+    #[serde(rename = "3.0.3")]
+    OpenApi3_0_3,
     /// Version `3.1.0`.
     #[serde(rename = "3.1.0")]
     OpenApi3_1,
