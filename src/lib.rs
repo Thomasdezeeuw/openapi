@@ -1098,37 +1098,35 @@ pub struct Tag {
     pub external_docs: Option<ExternalDocument>,
 }
 
-/// A reference to, or inlined object, `T`.
+/// A simple object to allow referencing other components in the OpenAPI
+/// document, internally and externally.
+///
+/// The `$ref` string value contains a URI [RFC3986], which identifies the
+/// location of the value being referenced.
+///
+/// [RFC3986]: https://tools.ietf.org/html/rfc3986
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", untagged)]
-pub enum Reference<T> {
-    /// A simple object to allow referencing other components in the OpenAPI
-    /// document, internally and externally.
+#[serde(rename_all = "camelCase")]
+pub struct Reference<T> {
+    /// The reference identifier. This MUST be in the form of a URI.
+    #[serde(rename = "$ref")]
+    r#ref: Option<String>,
+    /// A short summary which by default SHOULD override that of the
+    /// referenced component. If the referenced object-type does not allow a
+    /// `summary` field, then this field has no effect.
+    #[serde(default)]
+    summary: Option<String>,
+    /// A description which by default SHOULD override that of the
+    /// referenced component. [CommonMark syntax] MAY be used for rich text
+    /// representation. If the referenced object-type does not allow a
+    /// `description` field, then this field has no effect.
     ///
-    /// The `$ref` string value contains a URI [RFC3986], which identifies the
-    /// location of the value being referenced.
-    ///
-    /// [RFC3986]: https://tools.ietf.org/html/rfc3986
-    Reference {
-        /// The reference identifier. This MUST be in the form of a URI.
-        #[serde(rename = "$ref")]
-        r#ref: String,
-        /// A short summary which by default SHOULD override that of the
-        /// referenced component. If the referenced object-type does not allow a
-        /// `summary` field, then this field has no effect.
-        #[serde(default)]
-        summary: Option<String>,
-        /// A description which by default SHOULD override that of the
-        /// referenced component. [CommonMark syntax] MAY be used for rich text
-        /// representation. If the referenced object-type does not allow a
-        /// `description` field, then this field has no effect.
-        ///
-        /// [CommonMark syntax]: https://spec.commonmark.org
-        #[serde(default)]
-        description: Option<String>,
-    },
-    /// Inline object `T`.
-    Inline(T),
+    /// [CommonMark syntax]: https://spec.commonmark.org
+    #[serde(default)]
+    description: Option<String>,
+    /// Object `T`.
+    #[serde(flatten)]
+    object: Option<T>,
 }
 
 /// The Schema Object allows the definition of input and output data types.
