@@ -1301,7 +1301,7 @@ pub struct Schema {
     /// for the presence and size of a `prefix_items` array. Implementations
     /// that do not support annotation collection MUST do so.
     #[serde(default)]
-    pub items: Vec<Schema>,
+    pub items: Option<Box<Schema>>,
     /// An array instance is valid against `contains` if at least one of its
     /// elements is valid against the given schema. The subschema MUST be
     /// applied to every array element even after the first match has been
@@ -1819,6 +1819,7 @@ pub enum Format {
     /// A string instance is valid against this attribute if it is a valid
     /// representation according to the "full-time" production.
     #[serde(alias = "full-time")]
+    #[serde(alias = "partial-time")] // TODO: not sure if this valid.
     Time,
     /// A string instance is valid against this attribute if it is a valid
     /// representation according to the "duration" production.
@@ -1944,9 +1945,6 @@ pub enum Format {
     Double,
     /// A hint to UIs to obscure input.
     Password,
-
-    /// Unrecognised data format.
-    Other(String),
 }
 
 /// Discriminator Object.
@@ -2182,4 +2180,4 @@ pub type SecurityRequirement = HashMap<String, Vec<String>>;
 /// Any value.
 ///
 /// Untyped value.
-pub type Any = (); // FIXME.
+pub type Any = serde_json::Value; // TODO: create our own type.
