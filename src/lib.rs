@@ -1573,7 +1573,7 @@ pub struct Schema {
     /// accurately described by authoritative resources, be they RFCs or other
     /// external specifications.
     #[serde(default)]
-    pub format: Option<Format>,
+    pub format: Option<FormatOrString>,
 
     // JSON Schema Validation Section 8. A Vocabulary for the Contents of
     // String-Encoded Data
@@ -1798,6 +1798,14 @@ pub enum Type {
     Integer,
 }
 
+/// Either a known [`Format`] or falls back to a string.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum FormatOrString {
+    Format(Format),
+    Other(String),
+}
+
 /// Data format defined by [JSON Schema Validation Section 7.3] and extended by
 /// the OpenAPI spec.
 ///
@@ -1866,6 +1874,7 @@ pub enum Format {
     /// according to [RFC3986].
     ///
     /// [RFC3986]: https://datatracker.ietf.org/doc/html/rfc3986
+    #[serde(alias = "url")] // Commonly seen.
     Uri,
     /// A string instance is valid against this attribute if it is a valid URI
     /// Reference (either a URI or a relative- reference), according to
@@ -1931,6 +1940,12 @@ pub enum Format {
     ///
     /// [ECMA-262]: https://www.ecma-international.org/ecma-262/11.0
     Regex,
+
+    // Commonly seen.
+    /// Binary data.
+    Binary,
+    /// An IPv4 or IPv6 address, also see the `Ipv4` and `Ipv6` variants.
+    Ip,
 
     // OpenAPI spec extension.
     /// Signed 32 bits integer.
