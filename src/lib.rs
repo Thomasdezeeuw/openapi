@@ -26,6 +26,8 @@ pub use parse::read_from_json_file;
 #[cfg(feature = "yaml")]
 pub use parse::read_from_yaml_file;
 
+pub mod code;
+
 /// This is the root object of the OpenAPI document.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
